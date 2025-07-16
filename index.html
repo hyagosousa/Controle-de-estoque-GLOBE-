@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Controle de Estoque Hyago</title>
+    <button onclick="limparRelatorioComSenha()">🧹 Limpar Relatório (senha)</button>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 950px;
+      margin: auto;
+      padding: 20px;
+    }
+    h2, h3 {
+      color: #333;
+    }
+    label, select, input, button {
+      display: block;
+      width: 100%;
+      margin: 6px 0 12px 0;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #aaa;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .entrada { color: green; }
+    .saida { color: red; }
+    .alerta {
+      background-color: #fff3cd;
+      border-left: 6px solid #ff9900;
+      padding: 10px;
+      margin-top: 20px;
+    }
+    .estoque-baixo {
+      color: red;
+      font-weight: bold;
+    }
+    #relatorioModal {
+      position: fixed;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 900px;
+      max-height: 80%;
+      background: #fff;
+      border: 2px solid #333;
+      box-shadow: 0 0 10px #999;
+      padding: 20px;
+      overflow-y: auto;
+      display: none;
+      z-index: 1000;
+    }
+    #relatorioModal textarea {
+      width: 100%;
+      height: 300px;
+      font-family: monospace;
+      font-size: 14px;
+      white-space: pre-wrap;
+    }
+    #relatorioModal button {
+      width: auto;
+      margin-top: 10px;
+      padding: 8px 16px;
+      margin-right: 10px;
+    }
+    #overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      z-index: 999;
+    }
+  </style>
+</head>
+<body>
+  <h2>Controle de Estoque - Hyago</h2>
+
+  <label for="material">Material:</label>
+  <select id="material">
+    <option disabled selected>Selecione</option>
+    <!-- Materiais por metro -->
+    <option data-unidade="m">TRILHO DIN P/DISJUNTORES</option>
+    <option data-unidade="m">CANALETA RECORTE SEMI ABERTO 50X50</option>
+    <option data-unidade="m">CANALETA RECORTE SEMI ABERTO 80X80</option>
+    <option data-unidade="m">CABO FLEXIVEL 1,5 MM VERMELHO</option>
+    <option data-unidade="m">CABO FLEXIVEL 1,5 MM PRETO</option>
+    <option data-unidade="m">CABO FLEXIVEL 2,5 MM AZUL</option>
+    <option data-unidade="m">CABO FLEXIVEL 2,5 MM VERMELHO</option>
+    <option data-unidade="m">CABO FLEXIVEL 2,5 MM PRETO</option>
+    <option data-unidade="m">CABO FLEXIVEL 2,5 MM VERDE</option>
+    <option data-unidade="m">CABO FLEXIVEL 2,5 MM BRANCO</option>
+    <option data-unidade="m">CABO FLEXIVEL 2,5 MM CINZA</option>
+    <option data-unidade="m">CABO FLEXIVEL 2,5 MM AMARELO</option>
+    <option data-unidade="m">CABO FLEXIVEL 6 MM VERMELHO</option>
+    <option data-unidade="m">CABO FLEXIVEL 6 MM PRETO</option>
+    <option data-unidade="m">CABO FLEXIVEL 16 MM VERMELHO</option>
+    <option data-unidade="m">CABO FLEXIVEL 16 MM PRETO</option>
+    <option data-unidade="m">CABO FLEXIVEL 35 MM VERMELHO</option>
+    <option data-unidade="m">CABO FLEXIVEL 35 MM PRETO</option>
+    <option data-unidade="m">CABO FLEXIVEL 50 MM AZUL</option>
+    <option data-unidade="m">CABO FLEXIVEL 50 MM PRETO</option>
+    <option data-unidade="m">CABO FLEXIVEL 50 MM VERMELHO</option>
+    <option data-unidade="m">CABO FLEXIVEL 70 MM PRETO</option>
+    <option data-unidade="m">CABO FLEXIVEL 70 MM AZUL</option>
+    <option data-unidade="m">CABO FLEXIVEL 70 MM VERMELHO</option>
+    <option data-unidade="m">CABO PP 0,75 MM</option>
+    <option data-unidade="m">CABO PP 3X2,5 MM</option>
+    <option data-unidade="m">CABO PP 4X1 MM</option>
+    <option data-unidade="m">CABO PP 3X4 MM</option>
+
+    <!-- Materiais por unidade -->
+    <option data-unidade="un">QUADRO DE DISTRIBUIÇÃO</option>
+    <option data-unidade="un">CAIXA DE PASSAGEM PLÁSTICA CINZA P</option>
+    <option data-unidade="un">CAIXA DE PASSAGEM CINZA P</option>
+    <option data-unidade="un">FUSÍVEL AUTOMOTIVO DE 10A</option>
+    <option data-unidade="un">FUSÍVEL AUTOMOTIVO DE 15A</option>
+    <option data-unidade="un">FUSÍVEL AUTOMOTIVO DE 20A</option>
+    <option data-unidade="un">FUSÍVEL AUTOMOTIVO DE 25A</option>
+    <option data-unidade="un">FUSÍVEL AUTOMOTIVO DE 40A</option>
+    <option data-unidade="un">FUSÍVEL AUTOMOTIVO 60A</option>
+    <option data-unidade="un">FUSÍVEL AUTOMOTIVO 80A</option>
+    <option data-unidade="un">FUSIVEL AUTOMOTIVO 100A</option>
+    <option data-unidade="un">FUSÍVEL AUTOMOTIVO 150A</option>
+    <option data-unidade="un">FUSÍVEL AUTOMOTIVO 250A</option>
+    <option data-unidade="un">DISJUNTOR CA BIPOLAR 06A</option>
+    <option data-unidade="un">DISJUNTOR CA BIPOLAR 20A</option>
+    <option data-unidade="un">DISJUNTOR CC BIPOLAR 25A</option>
+    <option data-unidade="un">DR 06 MA</option>
+    <option data-unidade="un">RELÉ SOB SUB TENSÃO P/INVERSOR</option>
+    <option data-unidade="un">RELÉ SOB SUB TENSÃO P/ENERGIA EXTERNA</option>
+    <option data-unidade="un">CHAVE DE TRANSFERÊNCIA AUTOMÁTICA</option>
+    <option data-unidade="un">CONECTOR WAGO P</option>
+    <option data-unidade="un">CONECTOR WAGO G</option>
+    <option data-unidade="un">CONECTOR ILHÓS 2,5 MM</option>
+    <option data-unidade="un">CONECTOR ILHÓS 1 MM</option>
+    <option data-unidade="un">CONECTOR ILHÓS 6 MM</option>
+    <option data-unidade="un">CONECTOR OLHAL 16 MM</option>
+    <option data-unidade="un">CONECTOR OLHAL 25 MM</option>
+    <option data-unidade="un">CONECTOR OLHAL 35 MM</option>
+    <option data-unidade="un">CONECTOR OLHAL 50 MM</option>
+    <option data-unidade="un">CONECTOR OLHAL 70 MM</option>
+    <option data-unidade="un">INVERSOR ECOWORD 2000W 12V</option>
+    <option data-unidade="un">INVERSOR EPEVER 1500W 12V</option>
+    <option data-unidade="un">INVERSOR EPEVER 3000W 12V</option>
+    <option data-unidade="un">INVERSOR ECOWORD 2000W 24V</option>
+    <option data-unidade="un">INVERSOR EPEVER 1500W 24V</option>
+    <option data-unidade="un">INVERSOR EPEVER 3000W 24V</option>
+    <option data-unidade="un">PLACA SOLAR 410W</option>
+    <option data-unidade="un">GERÊNCIADOR DE BATERIAS VICTRON ORION 12/12 30A</option>
+    <option data-unidade="un">CONTROLADOR SOLAR EPEVER MPPT 40A</option>
+    <option data-unidade="un">CONTROLADOR SOLAR EPEVER MPPT 30A</option>
+    <option data-unidade="un">CARREGADOR USINA 12V 70A</option>
+    <option data-unidade="un">CARREGADOR USINA 12V 90A</option>
+    <option data-unidade="un">CARREGADOR USINA 12V 100A</option>
+    <option data-unidade="un">CARREGADOR USINA 12V 120A</option>
+    <option data-unidade="un">CARREGADOR USINA 24V 90A</option>
+    <option data-unidade="un">CARREGADOR USINA 24V 70A</option>
+    <option data-unidade="un">CARREGADOR USINA 24V 100A</option>
+    <option data-unidade="un">CARREGADOR USINA 24V 120A</option>
+    <option data-unidade="un">PLACA DE SLIDE-OUT</option>
+    <option data-unidade="un">CONTROLADOR MPPT VICTRON</option>
+    <option data-unidade="un">GERÊNCIADOR DE BATERIAS VICTRON ORION 12/12 30A</option>
+    <option data-unidade="un">INVERSOR MULTIPLUS 12V 2000VA</option>
+  </select>
+
+  <label for="tipo">Tipo:</label>
+  <select id="tipo" onchange="mostrarResponsavel()">
+    <option value="entrada">Entrada</option>
+    <option value="saida">Saída</option>
+  </select>
+
+  <label for="quantidade">Quantidade:</label>
+  <input type="number" id="quantidade" min="1" placeholder="Digite a quantidade" />
+
+  <label id="labelEntrada" for="responsavelEntrada">Responsável pela Entrada:</label>
+  <input type="text" id="responsavelEntrada" placeholder="Digite o nome de quem recebeu" />
+
+  <label id="labelSaida" for="responsavelSaida" style="display:none;">Responsável pela Saída:</label>
+  <input type="text" id="responsavelSaida" placeholder="Digite o nome de quem retirou" style="display:none;" />
+
+  <label for="minimo">Estoque Mínimo Desejado:</label>
+  <input type="number" id="minimo" min="0" placeholder="Ex: 50 (opcional)" />
+
+  <button onclick="registrar()">Registrar</button>
+  <button onclick="gerarRelatorio()">Gerar Relatório</button>
+
+  <div id="alertaReposicao"></div>
+
+  <h3>Saldo Atual por Material</h3>
+  <table id="tabelaSaldo">
+    <thead>
+      <tr><th>Material</th><th>Saldo</th><th>Unidade</th><th>Mínimo</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h3>Histórico de Movimentações</h3>
+  <table id="tabelaHistorico">
+    <thead>
+      <tr>
+        <th>Data e Hora</th>
+        <th>Material</th>
+        <th>Tipo</th>
+        <th>Quantidade</th>
+        <th>Responsável Entrada</th>
+        <th>Responsável Saída</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- Modal para mostrar relatório -->
+  <div id="overlay"></div>
+  <div id="relatorioModal">
+    <h3>Relatório de Movimentações</h3>
+    <textarea readonly id="textoRelatorio"></textarea>
+    <button onclick="copiarRelatorio()">Copiar Relatório</button>
+    <button onclick="enviarWhatsApp()">Enviar via WhatsApp</button>
+    <button onclick="baixarPDF()">Baixar PDF</button>
+    <button onclick="fecharRelatorio()">Fechar</button>
+  </div>
+
+  <script>
+    // Dados armazenados
+    let historico = JSON.parse(localStorage.getItem('estoqueHistorico') || '[]');
+    let saldos = JSON.parse(localStorage.getItem('estoqueSaldos') || '{}');
+    let minimos = JSON.parse(localStorage.getItem('estoqueMinimos') || '{}');
+    let unidades = JSON.parse(localStorage.getItem('estoqueUnidades') || '{}');
+
+    // Atualiza a exibição dos campos de responsável conforme tipo
+    function mostrarResponsavel() {
+      const tipo = document.getElementById('tipo').value;
+      if (tipo === 'entrada') {
+        document.getElementById('labelEntrada').style.display = 'block';
+        document.getElementById('responsavelEntrada').style.display = 'block';
+        document.getElementById('labelSaida').style.display = 'none';
+        document.getElementById('responsavelSaida').style.display = 'none';
+      } else {
+        document.getElementById('labelEntrada').style.display = 'none';
+        document.getElementById('responsavelEntrada').style.display = 'none';
+        document.getElementById('labelSaida').style.display = 'block';
+        document.getElementById('responsavelSaida').style.display = 'block';
+      }
+    }
+
+    // Função para registrar movimentação
+    function registrar() {
+      const materialSelect = document.getElementById('material');
+      const material = materialSelect.value;
+      if(material === "Selecione" || !material) {
+        alert('Selecione um material válido.');
+        return;
+      }
+
+      const tipo = document.getElementById('tipo').value;
+      const quantidade = parseInt(document.getElementById('quantidade').value);
+      if (isNaN(quantidade) || quantidade <= 0) {
+        alert('Digite uma quantidade válida.');
+        return;
+      }
+
+      const responsavelEntrada = document.getElementById('responsavelEntrada').value.trim();
+      const responsavelSaida = document.getElementById('responsavelSaida').value.trim();
+
+      if ((tipo === 'entrada' && responsavelEntrada === '') || (tipo === 'saida' && responsavelSaida === '')) {
+        alert('Preencha o responsável corretamente.');
+        return;
+      }
+
+      const minimoInput = document.getElementById('minimo').value;
+      if (minimoInput !== '') {
+        minimos[material] = parseInt(minimoInput);
+      }
+
+      // Pega a unidade direto do option selecionado
+      const unidade = materialSelect.options[materialSelect.selectedIndex].getAttribute('data-unidade') || 'un';
+      unidades[material] = unidade;
+
+      if (!saldos[material]) saldos[material] = 0;
+
+      saldos[material] += (tipo === 'entrada' ? quantidade : -quantidade);
+
+      const dataHora = new Date().toLocaleString();
+
+      historico.push({
+        dataHora,
+        material,
+        tipo,
+        quantidade,
+        responsavelEntrada: tipo === 'entrada' ? responsavelEntrada : '',
+        responsavelSaida: tipo === 'saida' ? responsavelSaida : '',
+        unidade
+      });
+
+      // Salva no localStorage
+      localStorage.setItem('estoqueHistorico', JSON.stringify(historico));
+      localStorage.setItem('estoqueSaldos', JSON.stringify(saldos));
+      localStorage.setItem('estoqueMinimos', JSON.stringify(minimos));
+      localStorage.setItem('estoqueUnidades', JSON.stringify(unidades));
+
+      atualizarTabelas();
+      limparCampos();
+    }
+
+    // Atualiza tabelas de saldo e histórico
+    function atualizarTabelas() {
+      // Histórico
+      const tbodyHist = document.querySelector('#tabelaHistorico tbody');
+      tbodyHist.innerHTML = '';
+      historico.slice().reverse().forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.dataHora}</td>
+          <td>${item.material}</td>
+          <td class="${item.tipo === 'entrada' ? 'entrada' : 'saida'}">${item.tipo}</td>
+          <td>${item.quantidade} ${item.unidade}</td>
+          <td>${item.responsavelEntrada || '-'}</td>
+          <td>${item.responsavelSaida || '-'}</td>
+        `;
+        tbodyHist.appendChild(tr);
+      });
+
+      // Saldo
+      const tbodySaldo = document.querySelector('#tabelaSaldo tbody');
+      tbodySaldo.innerHTML = '';
+      const alertaDiv = document.getElementById('alertaReposicao');
+      alertaDiv.innerHTML = '';
+
+      for (const material in saldos) {
+        const tr = document.createElement('tr');
+        const saldoAtual = saldos[material];
+        const minimo = minimos[material] || 0;
+        const unidade = unidades[material] || 'un';
+
+        tr.innerHTML = `
+          <td>${material}</td>
+          <td class="${saldoAtual <= minimo ? 'estoque-baixo' : ''}">${saldoAtual}</td>
+          <td>${unidade}</td>
+          <td>${minimo > 0 ? minimo : '-'}</td>
+        `;
+        tbodySaldo.appendChild(tr);
+
+        if (minimo > 0 && saldoAtual <= minimo) {
+          alertaDiv.innerHTML += `<div class="alerta">ATENÇÃO: Estoque do material <strong>${material}</strong> está baixo (mínimo: ${minimo} ${unidade})!</div>`;
+        }
+      }
+    }
+
+    // Limpa campos do formulário
+    function limparCampos() {
+      document.getElementById('material').selectedIndex = 0;
+      document.getElementById('quantidade').value = '';
+      document.getElementById('responsavelEntrada').value = '';
+      document.getElementById('responsavelSaida').value = '';
+      document.getElementById('minimo').value = '';
+      mostrarResponsavel();
+    }
+
+    // Gera o relatório e abre o modal
+    function gerarRelatorio() {
+      if (historico.length === 0) {
+        alert('Não há movimentações para gerar relatório.');
+        return;
+      }
+
+      let texto = 'Relatório de Movimentações - Controle de Estoque\n\n';
+
+      historico.forEach(item => {
+        texto += `Data/Hora: ${item.dataHora}\n`;
+        texto += `Material: ${item.material}\n`;
+        texto += `Tipo: ${item.tipo}\n`;
+        texto += `Quantidade: ${item.quantidade} ${item.unidade}\n`;
+        texto += `Responsável Entrada: ${item.responsavelEntrada || '-'}\n`;
+        texto += `Responsável Saída: ${item.responsavelSaida || '-'}\n`;
+        texto += '----------------------------------------\n';
+      });
+
+      document.getElementById('textoRelatorio').value = texto;
+      document.getElementById('overlay').style.display = 'block';
+      document.getElementById('relatorioModal').style.display = 'block';
+    }
+
+    // Fecha o modal
+    function fecharRelatorio() {
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('relatorioModal').style.display = 'none';
+    }
+
+    // Copia texto do relatório para área de transferência
+    function copiarRelatorio() {
+      const texto = document.getElementById('textoRelatorio');
+      texto.select();
+      texto.setSelectionRange(0, 99999);
+      document.execCommand('copy');
+      alert('Relatório copiado para a área de transferência!');
+    }
+
+    // Envia relatório via WhatsApp
+    function enviarWhatsApp() {
+      const texto = encodeURIComponent(document.getElementById('textoRelatorio').value);
+      const url = `https://api.whatsapp.com/send?text=${texto}`;
+      window.open(url, '_blank');
+    }
+
+    // Gera e baixa o PDF do relatório usando jsPDF
+    function baixarPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      const texto = document.getElementById('textoRelatorio').value;
+      const linhas = doc.splitTextToSize(texto, 180);
+
+      doc.setFontSize(12);
+      doc.text(linhas, 10, 10);
+
+      doc.save('relatorio_estoque.pdf');
+    }
+
+    // Inicializa exibição
+    mostrarResponsavel();
+    atualizarTabelas();
+  </script>
+  
+ <script>
+  const senhaLimpar = "Estoqueglobe";
+
+  function limparRelatorioComSenha() {
+    const senha = prompt("Digite a senha para limpar o relatório:");
+    if (senha === senhaLimpar) {
+      if (confirm("Tem certeza que deseja apagar TODO o histórico e os saldos?")) {
+        localStorage.removeItem('estoqueHistorico');
+        localStorage.removeItem('estoqueSaldos');
+        localStorage.removeItem('estoqueMinimos');
+        localStorage.removeItem('estoqueUnidades');
+        alert("Histórico e saldos apagados com sucesso.");
+        location.reload();
+      }
+    } else {
+      alert("Senha incorreta. Ação cancelada.");
+    }
+  }
+</script>
+
+</body>
+</html>
